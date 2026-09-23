@@ -9,7 +9,7 @@
 
 Dear Ethan,
 
-感謝來信，也謝謝您把 M2 的規劃方向與 DBA 的測試狀況說明得很清楚。以下依您信中的順序分兩部分回覆：第一部分是 VCF 9.1 最小建置架構（Management Domain 的儲存選項、6 台主機的配置建議、若採 vSAN 的硬體規格與網路前置需求），第二部分是 vSAN 上 DB VM 的效能調校（vSAN Policy、VM 層設定、Redo/Log File Sync 的判讀方式與再測試方法）。文中的技術依據均附上 Broadcom / VMware 官方文件出處（見附錄 A）；凡屬我們的規劃建議而非官方硬性要求者，會以「建議」標示，尚待原廠書面確認的事項則標示「待原廠確認」。
+感謝來信，也謝謝您把 M2 的規劃方向與 DBA 的測試狀況說明得很清楚。以下依您信中的順序分兩部分回覆：第一部分是 VCF 9.1 最小建置架構（Management Domain 的儲存選項、6 台主機的配置建議、若採 vSAN 的硬體規格與網路前置需求），第二部分是 vSAN 上 DB VM 的效能調校（vSAN Policy、VM 層設定、Redo/Log File Sync 的判讀方式與再測試方法）。文中的技術依據均附上 Broadcom / VMware / Oracle 官方文件出處（見附錄 A）；凡屬我們的規劃建議而非官方硬性要求者，會以「建議」標示，尚待原廠書面確認的事項則標示「待原廠確認」。
 
 ---
 
@@ -26,7 +26,7 @@ Broadcom KB 416270 亦明確指出，greenfield 部署的 Management Domain 現�
 需要留意的兩個前提：
 
 1. **SAN 的連線協定必須是 Fibre Channel（VMFS on FC）或 NFSv3。** KB 416270 說明 iSCSI、NFS v4.1、FCoE 與 NVMe over Fabrics（FC / TCP / RDMA）目前不在 greenfield 流程內，只能透過先建置 vSphere 再 converge / import 的方式納入 VCF [2]。請協助確認 M2 SAN 的協定與型號，若是 iSCSI 或 NVMe-oF，架構規劃需另行調整。
-2. **主機、FC HBA、NIC 需在 Broadcom Compatibility Guide 內**，且 FC zoning、LUN 與 VMFS datastore 需在主機加入 VCF 前先建好並掛載到所有主機（使用相同的 datastore 名稱），否則 VCF Installer / SDDC Manager 會把主機過濾掉 [5]。
+2. **主機、FC HBA、NIC 需在 Broadcom Compatibility Guide 內**，且 FC zoning、LUN 與 VMFS datastore 需在主機加入 VCF 前先建好並掛載到所有主機（使用相同的 datastore 名稱），否則 VCF Installer / SDDC Manager 在建立 domain 或 cluster 時不會列出這些主機 [5][49]。
 
 ### 1.2 以「先建 VCF 基礎架構、再逐步擴充」為方向的建議最小架構
 
@@ -235,6 +235,7 @@ Jonathan
 46. VMware Cloud Foundation Blog (2023-01-01), Performance Recommendations for vSAN ESA — https://blogs.vmware.com/cloud-foundation/2023/01/01/performance-recommendations-for-vsan-esa/
 47. Broadcom KB 392993, Minimum number of ESXi hosts required on vSAN clusters for deployment of VCF Management Domain — https://knowledge.broadcom.com/external/article/392993/minimum-number-of-esxi-hosts-required-on.html
 48. VCF 9.1 Design, Storage Models — https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/vmware-cloud-foundation-concepts/storage-models.html
+49. Broadcom KB 432318, Commissioned hosts are not visible during Workload Domain or Cluster creation when using VMFS_FC storage in VCF 9.x — https://knowledge.broadcom.com/external/article/432318/commissioned-hosts-are-not-visible-durin.html
 
 ---
 
@@ -247,7 +248,7 @@ Jonathan
 | 1.1 / 1.3 | VCF 9.x greenfield 的 Management Domain 可用 VMFS on FC / NFSv3 作為 principal storage | 官方文件已確認 | KB 416270、VCF 9.1 FAQ、Installer 文件 [5]、官方部落格 [3]。注意 Storage Models 頁 [48] 與 KB 392993 [47] 仍有舊敘述，已在 1.3 對客戶說明並建議開 Support case |
 | 1.1 | Management Cluster 最少 4 台主機（不分 vSAN / NFS / FC） | 官方文件已確認 | FAQ [1]、部落格 [3]。審查者發現 VCF Installer 本身可能允許更少主機（vSAN 3 台、外部儲存 2 台）但官方指引為 4 台，回覆採 4 台 |
 | 1.1 | iSCSI / NFS v4.1 / FCoE / NVMe-oF 不在 greenfield 流程 | 官方文件已確認 | KB 416270 [2] |
-| 1.1 | FC datastore 需事先建好並掛載所有主機、同名 | 官方文件已確認 | Installer 文件 [5]；KB 432318（主機被過濾）標題層級確認 |
+| 1.1 | FC datastore 需事先建好並掛載所有主機、同名 | 官方文件已確認 | Installer 文件 [5]；KB 432318 [49]（主機未列出）僅標題層級確認，寄出前請開啟 KB 核對內容 |
 | 1.2 | VI Workload Domain 使用 NFS / VMFS on FC 且用 vLCM image 時最少 2 台；Workload Management 需 3 台 | 官方文件已確認 | 9.1 techdocs [6] |
 | 1.2 | Minimal Footprint 藍圖：管理元件與 workload 同一 cluster | 官方文件已確認 | 9.1 design blueprint [7]；藍圖表格中的最低主機數未取得引句，未寫入正文 |
 | 1.2 | Cluster principal storage 建立後不可更改；同 domain 不同 cluster 可用不同 principal storage | 官方文件已確認 | [5][6] |
@@ -285,6 +286,6 @@ Jonathan
 
 1. 向 Broadcom Support 開立 case：主題「VCF 9.1 greenfield Management Domain on VMFS-FC, 6 hosts, consolidated」，取得書面確認後回覆客戶。
 2. 確認客戶 M2 SAN 協定（FC / iSCSI / NVMe-oF）與 M1 vCenter 確切版本。
-3. 附錄 A 的 48 個連結均由 Broadcom / VMware 官方網域搜尋結果取得，但本次撰稿環境無法直接開啟網頁，寄出前請逐一點開確認可連線且內容相符（特別是 [27] core.vmware.com 與 [44] developer.broadcom.com 可能已改版或轉址）。
+3. 附錄 A 的 49 個連結均由 Broadcom / VMware 官方網域搜尋結果取得，但本次撰稿環境無法直接開啟網頁，寄出前請逐一點開確認可連線且內容相符（特別是 [27] core.vmware.com 與 [44] developer.broadcom.com 可能已改版或轉址）。
 4. 若客戶的 vSAN 測試環境是 VCF 9.1 + Auto-RAID，2.2 的 policy 建議需依 Auto-RAID 的行為調整；請先取得 2.1 的環境資訊再定稿。
 5. 簽名欄【職稱】【公司】【電話】待填；刪除本附錄 B 與檔頭的檔案說明。
